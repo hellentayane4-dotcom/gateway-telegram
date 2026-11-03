@@ -1,0 +1,3 @@
+Smoke Pay Final UI - 2026-11-02
+API financeira definitiva: pendente por decisao de projeto.
+Saques reais: desativados por seguranca.

@@ -1,0 +1,16 @@
+SmokePay - correção de compatibilidade NowHub em produção
+
+Corrige o caso observado em produção onde GET /transactions/{id} retornou:
+- status: PAID
+- type: 0
+
+Segurança preservada:
+- depósito só é aceito após validar transaction_id, external_id e valor;
+- crédito continua idempotente no database.py;
+- type=0 é aceito apenas no fluxo de depósito;
+- COMPLETED/deposit continuam compatíveis;
+- consulta GET do webhook recebe até 3 tentativas curtas para eventual consistência.
+
+Arquivos:
+- webserver.py
+- conciliacao_nowhub.py

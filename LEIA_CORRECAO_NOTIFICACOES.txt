@@ -1,0 +1,22 @@
+SmokePay - correção de notificações NowHub
+
+Substituir:
+- webserver.py
+- conciliacao_nowhub.py
+- notificacoes.py
+
+Adicionar:
+- reenviar_ultima_notificacao_deposito.py
+
+A correção faz:
+- PIX recebido via NowHub -> usuário + canal + pix_recebido.png
+- depósito recuperado pela conciliação -> usuário + canal + pix_recebido.png
+- saque concluído via NowHub -> usuário + canal + saque_efetuado.png
+- saque recuperado pela conciliação -> usuário + canal + saque_efetuado.png
+- falha de notificação nunca desfaz crédito/conclusão já gravados
+
+O PIX GERADO já era notificado ao canal pelo deposito.py com pix_gerado.png.
+
+Para reenviar SOMENTE a notificação do último PIX já pago, sem alterar saldo:
+python reenviar_ultima_notificacao_deposito.py
+Execute esse script no máximo uma vez para o depósito antigo que ficou sem aviso.

@@ -1,0 +1,47 @@
+SMOKE PAY - VERSAO FINAL DE INTERFACE
+=====================================
+
+O QUE JA ESTA PRONTO
+- Interface principal Smoke Pay em preto/vermelho com banner.
+- Depositar, Sacar, Carteira, Historico, Minha Rede, Taxas, Status e Suporte.
+- Banners separados para PIX gerado, PIX recebido, saque efetuado e comissao paga.
+- Banco SQLite preservado e migrado sem apagar as tabelas antigas.
+- Saldo disponivel + saldo reservado para saques.
+- Historico financeiro.
+- Rede/afiliados com link de convite e ate 5 niveis de visualizacao.
+- Comissao idempotente pronta, DESLIGADA por padrao (0%).
+- Painel administrativo com status e travas de operacao.
+- Webserver local na porta 8000 e /health.
+- Estrutura para provedores de deposito/saque separada do restante do bot.
+- BotaPix e SigiloPay mantidas apenas como adaptadores opcionais/legados.
+
+O QUE FICA PARA A ETAPA FINAL
+- Conectar a documentacao da API financeira definitiva em provider_final.py.
+- Ajustar o webhook definitivo em /webhooks/provider.
+- Ativar DEPOSIT_PROVIDER e WITHDRAWAL_PROVIDER somente depois dos testes.
+
+PRIMEIRA INSTALACAO
+1. NAO apague a pasta antiga antes de testar esta.
+2. Copie .env.example para um novo arquivo chamado .env.
+3. Coloque TELEGRAM_BOT_TOKEN e ADMIN_TELEGRAM_ID no .env.
+4. Deixe DEPOSIT_PROVIDER=disabled e WITHDRAWAL_PROVIDER=disabled enquanto nao houver API final.
+5. Execute INSTALAR_SMOKEPAY.bat.
+6. Execute TESTAR_CONFIGURACAO.bat.
+7. Se Banco SQLite = OK e TELEGRAM_BOT_TOKEN = OK, execute INICIAR_SMOKEPAY.bat.
+8. Para receber webhooks no computador, deixe o ngrok aberto na porta 8000.
+
+SEGURANCA
+- Nunca envie seu .env, API Key, secret ou token para terceiros.
+- Saques reais ficam desativados ate ENABLE_REAL_WITHDRAWALS=true E provedor configurado.
+- A criacao de uma cobranca PIX nunca credita saldo sozinha.
+- Credito, estorno e liberacao de saque sao idempotentes para evitar duplicidade.
+- Use BACKUP_BANCO.bat antes de qualquer alteracao importante.
+
+ARQUIVOS IMPORTANTES
+main.py              interface e menu principal
+provider_final.py    ponto principal da API definitiva
+payment_providers.py roteamento entre provedores
+webserver.py         webhooks / health
+ database.py         saldo, historico, afiliados, comissoes, idempotencia
+assets/               imagens Smoke Pay
+smokepay.db           seu banco preservado

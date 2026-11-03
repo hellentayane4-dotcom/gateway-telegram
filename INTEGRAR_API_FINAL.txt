@@ -1,0 +1,25 @@
+COMO ENCAIXAR A API DEFINITIVA DEPOIS
+=====================================
+
+A interface do bot nao precisa ser refeita.
+
+1. Abra provider_final.py.
+2. Implemente criar_deposito() conforme a documentacao da nova API.
+3. Implemente criar_saque() somente se o provedor permitir payout PIX para terceiros.
+4. No webserver.py, implemente /webhooks/provider com a autenticacao oficial do provedor.
+5. Converta os eventos externos para os estados internos:
+   deposito: criando -> pendente -> pago / cancelado / estornado / chargeback
+   saque: reservado -> processando -> concluido / falhou
+6. Use as funcoes do database.py para credito/reserva. Nao atualize saldo diretamente no adaptador.
+7. Preencha no .env:
+   DEPOSIT_PROVIDER=final
+   WITHDRAWAL_PROVIDER=final (somente se houver payout)
+   FINAL_PROVIDER_ENABLED=true
+   FINAL_API_BASE_URL=...
+   FINAL_API_KEY=...
+   FINAL_API_SECRET=...
+   FINAL_WEBHOOK_SECRET=...
+8. Para saques reais, ENABLE_REAL_WITHDRAWALS continua false ate os testes terminarem.
+
+REGRA IMPORTANTE
+Nunca considere cobranca criada como pagamento confirmado. O saldo so deve ser creditado apos webhook autenticado ou consulta segura do status pago, com idempotencia.
