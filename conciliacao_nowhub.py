@@ -1,62 +1,3 @@
-"""Conciliação conservadora de transações NowHub já vinculadas.
-
-Nunca cria PIX ou envia saques. Não libera saques falhos automaticamente.
-Operações sem ID do provedor exigem análise manual.
-"""
-import asyncio
-import logging
-import os
-from decimal import Decimal, InvalidOperation
-
-from config import settings
-from database import conectar, confirmar_deposito_pago, concluir_saque
-from nowhub import client
-
-log = logging.getLogger('smokepay.conciliacao')
-
-
-def _cents(value):
-    try:
-        amount = Decimal(str(value))
-        if not amount.is_finite() or amount * 100 != (amount * 100).to_integral_value():
-            return None
-        return int(amount * 100)
-    except (InvalidOperation, ValueError, TypeError):
-        return None
-
-
-def _rows():
-    conn = conectar()
-    try:
-        deposits = [dict(x) for x in conn.execute("""
-            SELECT * FROM depositos_api WHERE provider='nowhub'
-            AND status='pendente' AND provider_transaction_id IS NOT NULL
-            ORDER BY id LIMIT 100
-        """).fetchall()]
-        withdrawals = [dict(x) for x in conn.execute("""
-            SELECT * FROM saques_api WHERE status='processando'
-            AND provider_withdraw_id IS NOT NULL
-            ORDER BY id LIMIT 100
-        """).fetchall()]
-        return deposits, withdrawals
-    finally:
-        conn.close()
-
-
-async def conciliar_uma_vez(bot=None):
-    # Independent fail-closed switches: no financial state changes in simulation.
-    if os.getenv('NOWHUB_DEPOSIT_SIMULATION', 'true').lower() not in {'false', '0', 'no'}:
-        return {'bloqueado': 'simulacao'}
-    if not settings.nowhub_hmac_verified or settings.deposit_provider != 'nowhub':
-        return {'bloqueado': 'configuracao'}
-    deposits, withdrawals = _rows()
-    results = {'depositos_conferidos': 0, 'saques_conferidos': 0, 'alertas': 0}
-    for kind, items in (('deposit', deposits), ('withdraw', withdrawals)):
-        for row in items:
-            ref = row['provider_transaction_id'] if kind == 'deposit' else row['provider_withdraw_id']
-            try:
-                tx = await client.transaction(ref)
-                if not isinstance(tx, dict) or str(tx.get('transaction_id')) != ref:
                     raise ValueError('ID da transacao divergente')
                 if str(tx.get('external_id') or '') != row['identificador']:
                     raise ValueError('external_id divergente')
@@ -145,6 +86,11 @@ async def executar_conciliacao_periodica(bot=None):
     while True:
         log.info('Conciliação NowHub: iniciando ciclo')
         try:
+            alertar_saques_sem_id()
+        except Exception:
+            # O diagnostico nunca pode interromper a conciliacao dos depositos.
+            log.exception('Falha ao monitorar saques sem ID; conciliacao continua')
+        try:
             result = await conciliar_uma_vez(bot)
             log.info(
                 'Conciliação NowHub: ciclo concluído | depósitos=%s | saques=%s | alertas=%s | bloqueado=%s',
@@ -158,4 +104,3 @@ async def executar_conciliacao_periodica(bot=None):
         except Exception:
             log.exception('Falha no ciclo de conciliação')
         await asyncio.sleep(30)
-  
