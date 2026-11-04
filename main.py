@@ -220,7 +220,7 @@ async def botoes(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"• Taxa: {dep_pct:.2f}% + {formatar_valor(settings.deposit_fee_fixed_cents)}\n\n"
             "💸 <b>Saques</b>\n"
             f"• Mínimo: {formatar_valor(settings.withdrawal_min_cents)}\n"
-            f"• Taxa: {saq_pct:.2f}% + {formatar_valor(settings.withdrawal_fee_fixed_cents)}\n\n"
+            f"• Taxa fixa: {formatar_valor(settings.withdrawal_fee_fixed_cents)} por saque\n\n"
             "ℹ️ As regras podem ser ajustadas antes da integração financeira definitiva."
         )
         await editar_painel(query, texto, voltar_menu())
