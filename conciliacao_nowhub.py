@@ -140,12 +140,22 @@ async def conciliar_uma_vez(bot=None):
     return results
 
 
+
 async def executar_conciliacao_periodica(bot=None):
     while True:
+        log.info('Conciliação NowHub: iniciando ciclo')
         try:
             result = await conciliar_uma_vez(bot)
+            log.info(
+                'Conciliação NowHub: ciclo concluído | depósitos=%s | saques=%s | alertas=%s | bloqueado=%s',
+                result.get('depositos_conferidos', 0),
+                result.get('saques_conferidos', 0),
+                result.get('alertas', 0),
+                result.get('bloqueado', 'não'),
+            )
             if result.get('alertas'):
                 log.warning('Conciliação requer atenção: %s', result)
         except Exception:
             log.exception('Falha no ciclo de conciliação')
         await asyncio.sleep(30)
+  
