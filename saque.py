@@ -340,26 +340,21 @@ async def confirmar_saque(update: Update, context: ContextTypes.DEFAULT_TYPE):
             resposta.get("receiptUrl"),
             str(resposta.get("webhookToken")) if resposta.get("webhookToken") else None,
         )
-    except PaymentProviderError as exc:
-        # An HTTP timeout can mean NowHub accepted the payout. Never refund
-        # an uncertain payout automatically: it requires reconciliation.
-        from nowhub import NowHubUncertainError
-        if settings.withdrawal_provider == "nowhub" and (isinstance(exc.__cause__, NowHubUncertainError) or "conciliação manual" in str(exc)):
-            logger.error("Saque incerto, reserva mantida: %s", identificador)
-            await editar_painel(query, "⚠️ Saque aguardando conciliação. Valor reservado; não tente novamente. Contate o suporte.")
-            context.user_data.clear()
-            return
-        liberar_saque(identificador, str(exc))
-        logger.warning("Transferência não iniciada: %s", exc)
-        await editar_painel(query, 
-            "⚠️ A transferência não foi iniciada. O valor reservado foi devolvido ao saldo.",
+   
+    except Exception:
+        # O provedor pode ter aceitado o saque mesmo sem resposta válida.
+        # Nunca liberar a reserva automaticamente após tentativa de envio.
+        logger.error("Saque exige conciliacao manual; reserva mantida: %s", identificador)
+        context.user_data.clear()
+        await editar_painel(
+            query,
+            "⚠️ Saque aguardando conciliação.\n\n"
+            "O valor permanece reservado para sua segurança. "
+            "Não solicite novamente. Entre em contato com o suporte.",
             teclado=InlineKeyboardMarkup([[InlineKeyboardButton("🏠 Menu", callback_data="menu")]]),
         )
-        if dados.get("ip_token"):
-            consumir_token_ip(dados["ip_token"], telegram_id)
-        context.user_data.clear()
         return
-
+  
     if dados.get("ip_token"):
         consumir_token_ip(dados["ip_token"], telegram_id)
     await editar_painel(query, 
