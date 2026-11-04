@@ -2,6 +2,7 @@ from callback_seguro import responder_callback
 import logging
 import os
 import uuid
+from io import BytesIO
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -30,6 +31,26 @@ def _calcular_taxa(centavos: int) -> tuple[int, int]:
     percentual = (centavos * settings.deposit_fee_percent_bp + 5000) // 10000
     taxa = percentual + settings.deposit_fee_fixed_cents
     return taxa, centavos - taxa
+
+
+def _imagem_qr_pix(codigo_pix: str) -> BytesIO:
+    """Gera QR Code localmente a partir do copia-e-cola recebido do provedor."""
+    import qrcode
+
+    qr = qrcode.QRCode(
+        version=None,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(codigo_pix)
+    qr.make(fit=True)
+    imagem = qr.make_image(fill_color="black", back_color="white")
+    arquivo = BytesIO()
+    imagem.save(arquivo, format="PNG")
+    arquivo.seek(0)
+    arquivo.name = "pix_smokepay.png"
+    return arquivo
 
 
 async def iniciar_deposito(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -187,40 +208,100 @@ async def confirmar_deposito(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     ref = cobranca.reference
-    caption = (
-        "🏦 <b>PIX GERADO COM SUCESSO</b>\n"
-        "━━━━━━━━━━━━━━━━━━\n\n"
-        f"💰 Valor: <b>{formatar_valor(dados['bruto'])}</b>\n"
-        f"🆔 ID: <code>{esc(abreviar(ref, 8, 6))}</code>\n"
-        "⏳ Status: <b>AGUARDANDO PAGAMENTO</b>\n\n"
-        "✅ Após a confirmação segura, o saldo será atualizado automaticamente."
+    chat_id = query.message.chat.id
+    referencia_publica = esc(abreviar(ref, 8, 6))
+    percentual_taxa = settings.deposit_fee_percent_bp / 100
+    taxa_fixa = formatar_valor(settings.deposit_fee_fixed_cents)
+
+    detalhes = (
+        "💠 <b>DEPÓSITO PIX GERADO</b>\n"
+        "━━━━━━━━━━━━━━━━━━\n"
+        f"💰 <b>Valor do PIX:</b> {formatar_valor(dados['bruto'])}\n"
+        f"💳 <b>Taxa SmokePay:</b> {percentual_taxa:.2f}% + {taxa_fixa} "
+        f"({formatar_valor(dados['taxa'])})\n"
+        f"✅ <b>Crédito previsto:</b> {formatar_valor(dados['liquido'])}\n"
+        f"🆔 <b>Transação:</b> <code>{referencia_publica}</code>\n"
+        "⏳ <b>Status:</b> AGUARDANDO PAGAMENTO\n"
     )
+    if cobranca.expires_at:
+        detalhes += f"⌛ <b>Validade informada:</b> {esc(cobranca.expires_at)}\n"
+    detalhes += (
+        "\n📷 Escaneie o QR Code acima ou copie o PIX da mensagem abaixo.\n"
+        "🔐 O saldo só será creditado após confirmação segura do pagamento.\n"
+        "⚠️ Se já pagou, não pague novamente; aguarde a atualização do status."
+    )
+
     botoes = []
-    if cobranca.payment_url:
+    if cobranca.payment_url and cobranca.payment_url.startswith(("https://", "http://")):
         botoes.append([InlineKeyboardButton("💠 ABRIR PAGAMENTO PIX", url=cobranca.payment_url)])
     botoes.append([InlineKeyboardButton("🏠 MENU", callback_data="menu")])
+    teclado = InlineKeyboardMarkup(botoes)
 
-    await enviar_painel(update, caption, InlineKeyboardMarkup(botoes), "pix_gerado.png")
-    if cobranca.pix_image_url:
-        try:
-            await context.bot.send_photo(chat_id=telegram_id, photo=cobranca.pix_image_url, caption="QR Code PIX — Smoke Pay")
-        except Exception:
-            logger.exception("Falha ao enviar QR Code")
+    # A NowHub fornece pix_copy_paste, mas não fornece imagem no adaptador atual.
+    # Criamos o QR a partir do MESMO código que será mostrado no copia-e-cola.
+    # Falhas de exibição NÃO provocam nova cobrança e NÃO alteram o banco.
+    imagem_enviada = False
     if cobranca.pix_code:
-        await context.bot.send_message(
-            chat_id=telegram_id,
-            text=f"💠 <b>PIX COPIA E COLA</b>\n\n<code>{esc(cobranca.pix_code)}</code>",
-            parse_mode="HTML",
-        )
+        try:
+            arquivo_qr = _imagem_qr_pix(cobranca.pix_code)
+            await context.bot.send_photo(
+                chat_id=chat_id,
+                photo=arquivo_qr,
+                caption="💠 <b>QR CODE PIX — SMOKEPAY</b>\n"
+                        f"💰 Valor para pagar: <b>{formatar_valor(dados['bruto'])}</b>",
+                parse_mode="HTML",
+            )
+            imagem_enviada = True
+        except Exception:
+            logger.exception("Falha ao gerar/enviar QR PIX; código copia-e-cola continua disponível")
 
-    await notificar_canal(
-        context.bot,
-        "💠 <b>PIX GERADO</b>\n\n"
-        f"💰 Valor: <b>{formatar_valor(dados['bruto'])}</b>\n"
-        f"🆔 ID: <code>{esc(abreviar(ref, 8, 6))}</code>\n"
-        "⏳ Status: <b>PENDENTE</b>",
-        imagem="pix_gerado.png",
-    )
+    if not imagem_enviada and cobranca.pix_image_url:
+        try:
+            await context.bot.send_photo(
+                chat_id=chat_id,
+                photo=cobranca.pix_image_url,
+                caption="💠 <b>QR CODE PIX — SMOKEPAY</b>",
+                parse_mode="HTML",
+            )
+            imagem_enviada = True
+        except Exception:
+            logger.exception("Falha ao enviar imagem QR fornecida pelo provedor")
+
+    try:
+        # Primeira mensagem após a imagem: detalhes + PIX copia-e-cola.
+        # Código em mensagem própria facilita copiar no Telegram.
+        await context.bot.send_message(
+            chat_id=chat_id, text=detalhes, parse_mode="HTML", reply_markup=teclado,
+        )
+        if cobranca.pix_code:
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text="📋 <b>PIX COPIA E COLA</b>\n"
+                     "Toque no código abaixo para copiar:\n\n"
+                     f"<code>{esc(cobranca.pix_code)}</code>",
+                parse_mode="HTML",
+            )
+        elif not imagem_enviada:
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text="⚠️ O provedor não retornou um código PIX exibível. "
+                     "Não gere outra cobrança antes de verificar esta transação.",
+            )
+    except Exception:
+        # A cobrança já foi criada e registrada; não fazer retry automático.
+        logger.exception("Falha ao exibir informações da cobrança PIX já criada")
+
+    try:
+        await notificar_canal(
+            context.bot,
+            "💠 <b>PIX GERADO</b>\n\n"
+            f"💰 Valor: <b>{formatar_valor(dados['bruto'])}</b>\n"
+            f"🆔 ID: <code>{referencia_publica}</code>\n"
+            "⏳ Status: <b>PENDENTE</b>",
+            imagem="pix_gerado.png",
+        )
+    except Exception:
+        logger.exception("Falha na notificação do canal de depósito criado")
     context.user_data.clear()
 
 
