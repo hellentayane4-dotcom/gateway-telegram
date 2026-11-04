@@ -286,7 +286,7 @@ def criar_web_app(bot: Bot) -> FastAPI:
                 result = "pendente"
         return {"ok": True, "result": result}
 
-        @app.post("/webhooks/sigilopay")
+    @app.post("/webhooks/sigilopay")
     async def webhook_sigilopay(request: Request):
         if not settings.sigilopay_enabled:
             raise HTTPException(status_code=404, detail="Webhook desativado")
