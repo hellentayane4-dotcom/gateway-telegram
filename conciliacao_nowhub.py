@@ -148,4 +148,4 @@ async def executar_conciliacao_periodica(bot=None):
                 log.warning('Conciliação requer atenção: %s', result)
         except Exception:
             log.exception('Falha no ciclo de conciliação')
-        await asyncio.sleep(120)
+        await asyncio.sleep(30)
