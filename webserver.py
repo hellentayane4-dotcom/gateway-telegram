@@ -273,8 +273,15 @@ def criar_web_app(bot: Bot) -> FastAPI:
                         f"💰 Valor: <b>{formatar_valor(saque['valor_envio_centavos'])}</b>",
                         imagem="saque_efetuado.png",
                     )
-            elif status in {"FAILED", "CANCELED", "REJECTED"}:
-                saque, result = liberar_saque(external, "NowHub: " + status)
+            
+            elif status in {"FAILED", "CANCELED", "REJECTED", "DISPUTED"}:
+                # Manter reserva ate revisao segura da transferencia.
+                logger.error(
+                    "Saque NowHub exige revisao manual: ref=%s status=%s",
+                    ref, status,
+                )
+                result = "revisao_manual"
+
             else:
                 result = "pendente"
         return {"ok": True, "result": result}
