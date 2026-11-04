@@ -398,15 +398,14 @@ def criar_web_app(bot: Bot) -> FastAPI:
                         f"💰 Valor: <b>{formatar_valor(saque['valor_envio_centavos'])}</b>",
                         imagem="saque_efetuado.png",
                     )
-            elif evento == "TRANSFER_FAILED" and ref:
-                wd = payload.get("withdraw") or {}
-                saque, resultado = liberar_saque(ref, str(wd.get("message") or "Transferência falhou"))
-                if saque is not None and resultado == "liberado":
-                    await notificar_usuario(
-                        bot,
-                        saque["telegram_id"],
-                        "⚠️ SMOKE PAY\n\nO saque falhou e o valor reservado foi devolvido ao seu saldo.",
-                    )
+         elif evento == "TRANSFER_FAILED" and ref:
+                logger.error(
+                    "Transferencia com falha: ref=%s. "
+                    "Reserva mantida para revisao manual.",
+                    ref,
+                )
+                resultado = "revisao_manual"
+            
         except Exception:
             logger.exception("Erro ao processar webhook %s ref=%s", evento, ref)
             resultado = "erro_interno"
