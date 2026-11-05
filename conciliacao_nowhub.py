@@ -51,7 +51,48 @@ def alertar_saques_sem_id():
 
     return len(atuais)
 
+_saques_sem_id_notificados = set()
 
+
+async def notificar_saques_sem_id(bot):
+    if bot is None or not settings.admin_telegram_id:
+        return
+
+    conn = conectar()
+    try:
+        rows = conn.execute("""
+            SELECT identificador, status
+            FROM saques_api
+            WHERE status IN ('reservado', 'processando')
+              AND (provider_withdraw_id IS NULL
+                   OR TRIM(provider_withdraw_id) = '')
+              AND datetime(criado_em) <= datetime('now', '-5 minutes')
+        """).fetchall()
+    finally:
+        conn.close()
+
+    atuais = {row["identificador"]: row["status"] for row in rows}
+    _saques_sem_id_notificados.intersection_update(atuais)
+
+    for ref, status in atuais.items():
+        if ref in _saques_sem_id_notificados:
+            continue
+        try:
+            await bot.send_message(
+                chat_id=settings.admin_telegram_id,
+                text=(
+                    "🚨 SMOKEPAY - SAQUE SEM ID\n\n"
+                    f"Referência: {ref}\n"
+                    f"Status: {status}\n"
+                    "Tempo: mais de 5 minutos\n\n"
+                    "Saldo permanece reservado.\n"
+                    "Verifique a transferência na NowHub "
+                    "antes de liberar ou reenviar."
+                ),
+            )
+            _saques_sem_id_notificados.add(ref)
+        except Exception:
+            log.exception("Falha ao notificar saque sem ID: %s", ref)
 def _cents(value):
     try:
         amount = Decimal(str(value))
@@ -183,6 +224,7 @@ async def executar_conciliacao_periodica(bot=None):
         log.info('Conciliação NowHub: iniciando ciclo')
         try:
             alertar_saques_sem_id()
+                        await notificar_saques_sem_id(bot)
         except Exception:
             # O diagnostico nunca pode interromper a conciliacao dos depositos.
             log.exception('Falha ao monitorar saques sem ID; conciliacao continua')
