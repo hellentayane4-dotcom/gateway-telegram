@@ -345,7 +345,7 @@ async def confirmar_saque(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # O provedor pode ter aceitado o saque mesmo sem resposta válida.
         # Nunca liberar a reserva automaticamente após tentativa de envio.
         logger.error("Saque exige conciliacao manual; reserva mantida: %s", identificador)
-         if settings.admin_telegram_id:
+        if settings.admin_telegram_id:
             try:
                 await context.bot.send_message(
                     chat_id=settings.admin_telegram_id,
