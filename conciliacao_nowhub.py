@@ -93,7 +93,8 @@ async def notificar_saques_sem_id(bot):
             _saques_sem_id_notificados.add(ref)
         except Exception:
             log.exception("Falha ao notificar saque sem ID: %s", ref)
-            
+
+
 def _cents(value):
     try:
         amount = Decimal(str(value))
@@ -225,7 +226,7 @@ async def executar_conciliacao_periodica(bot=None):
         log.info('Conciliação NowHub: iniciando ciclo')
         try:
             alertar_saques_sem_id()
-                        await notificar_saques_sem_id(bot)
+            await notificar_saques_sem_id(bot)
         except Exception:
             # O diagnostico nunca pode interromper a conciliacao dos depositos.
             log.exception('Falha ao monitorar saques sem ID; conciliacao continua')
