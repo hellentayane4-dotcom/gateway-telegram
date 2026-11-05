@@ -93,6 +93,7 @@ async def notificar_saques_sem_id(bot):
             _saques_sem_id_notificados.add(ref)
         except Exception:
             log.exception("Falha ao notificar saque sem ID: %s", ref)
+            
 def _cents(value):
     try:
         amount = Decimal(str(value))
