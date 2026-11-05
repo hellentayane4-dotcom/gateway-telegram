@@ -296,9 +296,9 @@ async def confirmar_deposito(update: Update, context: ContextTypes.DEFAULT_TYPE)
             context.bot,
             "💠 <b>PIX GERADO</b>\n\n"
             f"💰 Valor: <b>{formatar_valor(dados['bruto'])}</b>\n"
-            f"🆔 ID: <code>{referencia_publica}</code>\n"
-            "⏳ Status: <b>PENDENTE</b>",
+            "🟡 Status: <b>AGUARDANDO PAGAMENTO</b>",
             imagem="pix_gerado.png",
+            usuario_id=telegram_id,
         )
     except Exception:
         logger.exception("Falha na notificação do canal de depósito criado")

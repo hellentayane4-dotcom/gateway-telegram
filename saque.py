@@ -369,7 +369,11 @@ async def confirmar_saque(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         await notificar_canal(
             context.bot,
-            f"💜 SMOKE PAY | SAQUE\n\nUsuário: {telegram_id}\nSolicitado: {formatar_valor(dados['valor'])}\nEnvio: {formatar_valor(dados['envio'])}\nStatus: PROCESSANDO",
+            "💸 <b>SAQUE SOLICITADO</b>\n\n"
+            f"💰 Valor: <b>{formatar_valor(dados['valor'])}</b>\n"
+            f"🏦 Valor para envio: <b>{formatar_valor(dados['envio'])}</b>\n"
+            "🟡 Status: <b>PROCESSANDO</b>",
+            usuario_id=telegram_id,
         )
     except Exception:
         logger.exception("Falha na notificação de saque já enviado: %s", identificador)

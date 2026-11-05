@@ -227,10 +227,11 @@ def criar_web_app(bot: Bot) -> FastAPI:
                     await notificar_canal(
                         bot,
                         "✅ <b>PIX RECEBIDO</b>\n\n"
-                        f"🆔 Conta: <code>{str(dep['telegram_id'])[-6:]}</code>\n"
                         f"💰 Valor: <b>{formatar_valor(dep['valor_bruto_centavos'])}</b>\n"
-                        f"🧾 Crédito: {formatar_valor(dep['valor_liquido_centavos'])}",
+                        f"🧾 Crédito: {formatar_valor(dep['valor_liquido_centavos'])}\n"
+                        "🟢 Status: <b>CONFIRMADO</b>",
                         imagem="pix_recebido.png",
+                        usuario_id=dep["telegram_id"],
                     )
             elif status in {"FAILED", "CANCELED", "REJECTED"}:
                 dep, result = marcar_deposito_status(external, "cancelado")
@@ -269,9 +270,10 @@ def criar_web_app(bot: Bot) -> FastAPI:
                     await notificar_canal(
                         bot,
                         "✅ <b>SAQUE EFETUADO</b>\n\n"
-                        f"🆔 Conta: <code>{str(saque['telegram_id'])[-6:]}</code>\n"
-                        f"💰 Valor: <b>{formatar_valor(saque['valor_envio_centavos'])}</b>",
+                        f"💰 Valor: <b>{formatar_valor(saque['valor_envio_centavos'])}</b>\n"
+                        "🟢 Status: <b>CONCLUÍDO</b>",
                         imagem="saque_efetuado.png",
+                        usuario_id=saque["telegram_id"],
                     )
             
             elif status in {"FAILED", "CANCELED", "REJECTED", "DISPUTED"}:
@@ -347,10 +349,11 @@ def criar_web_app(bot: Bot) -> FastAPI:
                         await notificar_canal(
                             bot,
                             "✅ <b>PIX RECEBIDO</b>\n\n"
-                            f"🆔 Conta: <code>{str(dep['telegram_id'])[-6:]}</code>\n"
                             f"💰 Valor: <b>{formatar_valor(dep['valor_bruto_centavos'])}</b>\n"
-                            f"🧾 Crédito: {formatar_valor(dep['valor_liquido_centavos'])}",
+                            f"🧾 Crédito: {formatar_valor(dep['valor_liquido_centavos'])}\n"
+                            "🟢 Status: <b>CONFIRMADO</b>",
                             imagem="pix_recebido.png",
+                            usuario_id=dep["telegram_id"],
                         )
                         comissao, comissao_estado = aplicar_comissao_afiliado(dep["id"], settings.referral_commission_bp)
                         if comissao is not None and comissao_estado == "creditada":
@@ -366,8 +369,10 @@ def criar_web_app(bot: Bot) -> FastAPI:
                                 bot,
                                 "🤝 <b>COMISSÃO PAGA</b>\n\n"
                                 f"💰 Valor: <b>{formatar_valor(comissao['valor_centavos'])}</b>\n"
-                                f"👥 Nível: {comissao['nivel']}",
+                                f"👥 Nível: {comissao['nivel']}\n"
+                                "🟢 Status: <b>CREDITADA</b>",
                                 imagem="comissao_paga.png",
+                                usuario_id=comissao["beneficiario_id"],
                             )
             elif evento in {"TRANSACTION_CANCELED", "TRANSACTION_CANCELLED"} and ref:
                 _, resultado = marcar_deposito_status(ref, "cancelado")
@@ -397,9 +402,10 @@ def criar_web_app(bot: Bot) -> FastAPI:
                     await notificar_canal(
                         bot,
                         "✅ <b>SAQUE EFETUADO</b>\n\n"
-                        f"🆔 Conta: <code>{str(saque['telegram_id'])[-6:]}</code>\n"
-                        f"💰 Valor: <b>{formatar_valor(saque['valor_envio_centavos'])}</b>",
+                        f"💰 Valor: <b>{formatar_valor(saque['valor_envio_centavos'])}</b>\n"
+                        "🟢 Status: <b>CONCLUÍDO</b>",
                         imagem="saque_efetuado.png",
+                        usuario_id=saque["telegram_id"],
                     )
             elif evento == "TRANSFER_FAILED" and ref:
                 logger.error(
