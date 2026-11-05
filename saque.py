@@ -345,6 +345,20 @@ async def confirmar_saque(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # O provedor pode ter aceitado o saque mesmo sem resposta válida.
         # Nunca liberar a reserva automaticamente após tentativa de envio.
         logger.error("Saque exige conciliacao manual; reserva mantida: %s", identificador)
+                if settings.admin_telegram_id:
+            try:
+                await context.bot.send_message(
+                    chat_id=settings.admin_telegram_id,
+                    text=(
+                        "🚨 SMOKEPAY — SAQUE REQUER CONCILIAÇÃO\n\n"
+                        f"🆔 Referência: {identificador}\n"
+                        "🔒 Saldo reservado mantido.\n\n"
+                        "Confira a transferência diretamente na NowHub "
+                        "antes de qualquer nova tentativa ou liberação."
+                    ),
+                )
+            except Exception:
+                logger.exception("Falha ao alertar administrador")
         context.user_data.clear()
         await editar_painel(
             query,
