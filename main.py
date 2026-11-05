@@ -174,7 +174,7 @@ async def botoes(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if query.data == "historico":
-        deps = listar_depositos(user.id, 6)
+        deps = listar_depositos(user.id, 20)
         saqs = listar_saques(user.id, 6)
         dep_text = "\n".join(_linha_dep(r) for r in deps) if deps else "Nenhum depósito registrado."
         saq_text = "\n".join(_linha_saque(r) for r in saqs) if saqs else "Nenhum saque registrado."
