@@ -362,7 +362,7 @@ async def confirmar_saque(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Valor solicitado: {formatar_valor(dados['valor'])}\n"
         f"Valor da transferência: {formatar_valor(dados['envio'])}\n"
         "Status: PROCESSANDO\n\n"
-        "Se o provedor informar falha terminal, a reserva será liberada automaticamente uma única vez.",
+        "Se houver falha ou atraso na transferência, o valor permanecerá reservado até a confirmação ou conciliação segura.",
         teclado=InlineKeyboardMarkup([[InlineKeyboardButton("🏠 Menu", callback_data="menu")]]),
     )
     context.user_data.clear()
